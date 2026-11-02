@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>四位數 1A2B 猜數字遊戲 - 版本二：多局與猜測歷史</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f7f6;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .game-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 600px;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      margin-top: 10px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .control-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .debug-toggle {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #4a5568;
+      cursor: pointer;
+      user-select: none;
+    }
+    .debug-toggle input {
+      margin-right: 8px;
+      accent-color: #3182ce;
+      cursor: pointer;
+    }
+    .btn-new-game {
+      background-color: #3182ce;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-new-game:hover {
+      background-color: #2b6cb0;
+    }
+    .debug-box {
+      background-color: #fffaf0;
+      border: 1px dashed #dd6b20;
+      color: #c05621;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      text-align: center;
+      display: none;
+    }
+    .debug-box.active {
+      display: block;
+    }
+    .current-game-panel {
+      background: #faf5ff;
+      border: 1px solid #e9d8fd;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .game-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #44337a;
+    }
+    .status-tag {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .status-playing {
+      background-color: #bee3f8;
+      color: #2b6cb0;
+    }
+    .status-win {
+      background-color: #c6f6d5;
+      color: #22543d;
+    }
+    .status-unfinished {
+      background-color: #feebc8;
+      color: #744210;
+    }
+    .input-section {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .input-section input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .input-section input:focus {
+      border-color: #805ad5;
+    }
+    .input-section input:disabled {
+      background-color: #edf2f7;
+      cursor: not-allowed;
+    }
+    .btn-submit {
+      background-color: #805ad5;
+      color: white;
+      border: none;
+      padding: 0 20px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background-color: #6b46c1;
+    }
+    .btn-submit:disabled {
+      background-color: #cbd5e0;
+      cursor: not-allowed;
+    }
+    .error-msg {
+      color: #e53e3e;
+      font-size: 0.85rem;
+      min-height: 20px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      color: #2d3748;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-card {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .history-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .history-card-header h3 {
+      font-size: 0.95rem;
+      color: #4a5568;
+    }
+    .history-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #edf2f7;
+      border-radius: 8px;
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #edf2f7;
+    }
+    th {
+      background-color: #edf2f7;
+      color: #4a5568;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    .result-perfect {
+      color: #38a169;
+      font-weight: bold;
+    }
+    .win-banner {
+      background-color: #c6f6d5;
+      color: #22543d;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .win-banner.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-card">
+  <h1>🎯 幾 A 幾 B 猜數字遊戲 (v2 多局版)</h1>
+
+  <div class="control-panel">
+    <label class="debug-toggle">
+      <input type="checkbox" id="debugCheckbox" onchange="toggleDebugMode()">
+      除錯模式 (Debug Mode)
+    </label>
+    <button class="btn-new-game" onclick="startNewGame()">＋ 開新局</button>
+  </div>
+
+  <div id="debugBox" class="debug-box">
+    🕵️ 本局答案：<strong id="secretAnswerText">----</strong>
+  </div>
+
+  <!-- 當前局區域 -->
+  <div class="current-game-panel">
+    <div class="game-header">
+      <span class="game-title" id="currentGameTitle">第 1 局</span>
+      <span class="status-tag status-playing" id="currentGameStatus">進行中</span>
+    </div>
+
+    <div id="winBanner" class="win-banner">
+      🎉 恭喜通關！答對了答案：<span id="winAnswerText"></span>
+    </div>
+
+    <div class="input-section">
+      <input type="text" id="guessInput" placeholder="輸入 4 個不重複數字" maxlength="4" autocomplete="off" onkeydown="handleKeyDown(event)">
+      <button id="submitBtn" class="btn-submit" onclick="submitGuess()">猜測</button>
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <div class="history-container">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>猜測數字</th>
+            <th>結果</th>
+          </tr>
+        </thead>
+        <tbody id="currentHistoryTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 歷史局紀錄區域 -->
+  <div class="section-title">
+    📜 歷局對戰紀錄
+  </div>
+
+  <div id="allGamesHistoryList">
+    <!-- 歷史局動態生成於此 -->
+  </div>
+</div>
+
+<script>
+  let games = []; // 儲存每一局資料：{ round: 1, secret: "1234", guesses: [{guess: "0123", result: "0A3B"}], status: 'playing' | 'win' | 'unfinished' }
+  let currentRoundIndex = -1;
+
+  // 抽 4 個 0~9 不重複數字
+  function generateAnswer() {
+    const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+      const randomIndex = Math.floor(Math.random() * digits.length);
+      result += digits.splice(randomIndex, 1)[0];
+    }
+    return result;
+  }
+
+  // 開新局
+  function startNewGame() {
+    // 若當前有在進行中的對局，將其標記為『未完成』
+    if (currentRoundIndex >= 0 && games[currentRoundIndex].status === 'playing') {
+      games[currentRoundIndex].status = 'unfinished';
+    }
+
+    const roundNumber = games.length + 1;
+    const newGame = {
+      round: roundNumber,
+      secret: generateAnswer(),
+      guesses: [],
+      status: 'playing'
+    };
+
+    games.push(newGame);
+    currentRoundIndex = games.length - 1;
+
+    // 重置與更新介面
+    document.getElementById('guessInput').value = '';
+    document.getElementById('guessInput').disabled = false;
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('errorMsg').innerText = '';
+    document.getElementById('winBanner').classList.remove('active');
+
+    updateCurrentGameUI();
+    renderAllGamesHistory();
+    document.getElementById('guessInput').focus();
+  }
+
+  // 切換除錯模式
+  function toggleDebugMode() {
+    const isChecked = document.getElementById('debugCheckbox').checked;
+    const debugBox = document.getElementById('debugBox');
+    if (isChecked) {
+      debugBox.classList.add('active');
+    } else {
+      debugBox.classList.remove('active');
+    }
+  }
+
+  // 驗證輸入內容
+  function validateInput(inputStr) {
+    if (!inputStr) {
+      return "請輸入 4 位數字！";
+    }
+    if (!/^\d{4}$/.test(inputStr)) {
+      return "必須輸入嚴格 4 位數字（包含 0）！";
+    }
+    const uniqueSet = new Set(inputStr.split(''));
+    if (uniqueSet.size !== 4) {
+      return "四位數字不可重複！";
+    }
+    return null;
+  }
+
+  // 計算幾 A 幾 B
+  function calculateAB(secret, guess) {
+    let aCount = 0;
+    let bCount = 0;
+
+    for (let i = 0; i < 4; i++) {
+      if (guess[i] === secret[i]) {
+        aCount++;
+      } else if (secret.includes(guess[i])) {
+        bCount++;
+      }
+    }
+
+    return `${aCount}A${bCount}B`;
+  }
+
+  // 提交猜測
+  function submitGuess() {
+    if (currentRoundIndex < 0) return;
+    const currentGame = games[currentRoundIndex];
+    if (currentGame.status !== 'playing') return;
+
+    const inputEl = document.getElementById('guessInput');
+    const errorEl = document.getElementById('errorMsg');
+    const val = inputEl.value.trim();
+
+    const error = validateInput(val);
+    if (error) {
+      errorEl.innerText = error;
+      return;
+    }
+
+    errorEl.innerText = '';
+    const result = calculateAB(currentGame.secret, val);
+    
+    // 記錄有效猜測
+    currentGame.guesses.unshift({
+      guess: val,
+      result: result
+    });
+
+    inputEl.value = '';
+
+    // 檢查通關條件 4A0B
+    if (result === '4A0B') {
+      currentGame.status = 'win';
+      inputEl.disabled = true;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('winAnswerText').innerText = currentGame.secret;
+      document.getElementById('winBanner').classList.add('active');
+    }
+
+    updateCurrentGameUI();
+    renderAllGamesHistory();
+
+    if (currentGame.status === 'playing') {
+      inputEl.focus();
+    }
+  }
+
+  // 按 Enter 直接提交
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') {
+      submitGuess();
+    }
+  }
+
+  // 更新目前局介面與除錯訊息
+  function updateCurrentGameUI() {
+    const currentGame = games[currentRoundIndex];
+    document.getElementById('currentGameTitle').innerText = `第 ${currentGame.round} 局`;
+    document.getElementById('secretAnswerText').innerText = currentGame.secret;
+
+    const statusEl = document.getElementById('currentGameStatus');
+    if (currentGame.status === 'playing') {
+      statusEl.className = 'status-tag status-playing';
+      statusEl.innerText = '進行中';
+    } else if (currentGame.status === 'win') {
+      statusEl.className = 'status-tag status-win';
+      statusEl.innerText = '已猜對';
+    } else {
+      statusEl.className = 'status-tag status-unfinished';
+      statusEl.innerText = '未完成';
+    }
+
+    // 渲染當前局歷史表格
+    const tbody = document.getElementById('currentHistoryTableBody');
+    tbody.innerHTML = currentGame.guesses.map((item, index) => {
+      const roundNum = currentGame.guesses.length - index;
+      const isWin = item.result === '4A0B';
+      return `
+        <tr>
+          <td>${roundNum}</td>
+          <td>${item.guess}</td>
+          <td class="${isWin ? 'result-perfect' : ''}">${item.result}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // 渲染所有歷史局對戰紀錄
+  function renderAllGamesHistory() {
+    const container = document.getElementById('allGamesHistoryList');
+    
+    // 過濾出之前的局（排除當前局）
+    const previousGames = games.slice(0, currentRoundIndex).reverse();
+
+    if (previousGames.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #a0aec0; font-size: 0.9rem; padding: 12px;">尚無歷史對局紀錄</div>';
+      return;
+    }
+
+    container.innerHTML = previousGames.map(g => {
+      let statusBadge = '';
+      if (g.status === 'win') {
+        statusBadge = '<span class="status-tag status-win">已猜對</span>';
+      } else {
+        statusBadge = '<span class="status-tag status-unfinished">未完成</span>';
+      }
+
+      const rows = g.guesses.map((item, index) => {
+        const roundNum = g.guesses.length - index;
+        const isWin = item.result === '4A0B';
+        return `
+          <tr>
+            <td>${roundNum}</td>
+            <td>${item.guess}</td>
+            <td class="${isWin ? 'result-perfect' : ''}">${item.result}</td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <div class="history-card">
+          <div class="history-card-header">
+            <h3>第 ${g.round} 局 (答案: ${g.secret})</h3>
+            ${statusBadge}
+          </div>
+          <div class="history-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>猜測數字</th>
+                  <th>結果</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length > 0 ? rows : '<tr><td colspan="3" style="color: #a0aec0;">本局未有猜測紀錄</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 頁面載入後自動開局
+  window.onload = function() {
+    startNewGame();
+  };
+</script>
+</body>
+</html>
